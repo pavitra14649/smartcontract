@@ -1,70 +1,90 @@
-PavitraContract: A Simple Account Management Contract (Solidity)
+# Under-14 Cricket Selection Smart Contract
 
-This Solidity contract, named PavitraContract, implements basic functionalities for managing an account balance.
-It demonstrates the use of require(), revert(), and assert() statements for security and internal checks.
+This smart contract manages the selection process for an Under-14 cricket team. It allows players to register and the coach to select or reject players based on their eligibility.
 
+## Features
 
+- Player registration with age verification.
+- Player selection by the coach.
+- Player rejection with reasons.
+- Retrieval of player details.
 
-Features:
+## Prerequisites
 
+- [Solidity](https://soliditylang.org/) ^0.8.0
+- Ethereum development environment (e.g., [Remix IDE](https://remix.ethereum.org/), [Truffle](https://www.trufflesuite.com/), [Hardhat](https://hardhat.org/))
+- [MetaMask](https://metamask.io/) or any other Ethereum wallet
 
-Stores a public balance variable to track the account's funds.
+## Smart Contract Overview
 
-Allows deposits with a minimum amount restriction (deposit).
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-Allows withdrawals with sufficient balance checks (withdraw).
+contract Under14CricketSelection {
 
-Includes an emergency withdrawal function with additional security measures (emergencyWithdraw).
+    struct Player {
+        string name;
+        uint8 age;
+        bool isSelected;
+    }
 
-Provides a checkBalance function to retrieve the current balance (view function).
+    address public coach;
+    mapping(address => Player) public players;
+    uint public selectedPlayerCount;
 
+    event PlayerRegistered(address playerAddress, string name, uint8 age);
+    event PlayerSelected(address playerAddress, string name);
+    event PlayerRejected(address playerAddress, string name, string reason);
 
+    modifier onlyCoach() {
+        require(msg.sender == coach, "Only the coach can perform this action");
+        _;
+    }
 
-Security and Error Handling:
+    constructor() {
+        coach = msg.sender;
+    }
 
+    function registerPlayer(string memory _name, uint8 _age) public {
+        require(_age < 14, "Player must be under 14 years of age");
+        
+        players[msg.sender] = Player(_name, _age, false);
 
-require() statements ensure critical conditions are met before proceeding. They revert the transaction with a message if the condition fails.
+        emit PlayerRegistered(msg.sender, _name, _age);
+    }
 
-deposit requires a minimum deposit amount.
+    function selectPlayer(address _playerAddress) public onlyCoach {
+        Player storage player = players[_playerAddress];
+        
+        require(player.age != 0, "Player not registered");
+        require(player.age < 14, "Player must be under 14 years of age");
+        require(!player.isSelected, "Player is already selected");
 
-withdraw requires sufficient balance to avoid negative balances.
+        player.isSelected = true;
+        selectedPlayerCount++;
 
-revert() is used explicitly in the emergencyWithdraw function to revert the transaction if the withdrawal amount exceeds the balance.
+        assert(selectedPlayerCount > 0);
 
-assert() is used for internal state checks (withdraw) but is generally discouraged for production environments due to gas inefficiency.
+        emit PlayerSelected(_playerAddress, player.name);
+    }
 
+    function rejectPlayer(address _playerAddress, string memory reason) public onlyCoach {
+        Player storage player = players[_playerAddress];
 
+        require(player.age != 0, "Player not registered");
+        
+        if (player.age >= 14) {
+            revert("Player is not eligible, age is 14 or above");
+        }
 
-Deployment and Usage:
+        emit PlayerRejected(_playerAddress, player.name, reason);
+    }
 
+    function getPlayerDetails(address _playerAddress) public view returns (string memory, uint8, bool) {
+        Player memory player = players[_playerAddress];
+        return (player.name, player.age, player.isSelected);
+    }
+}
 
-Compile the contract using a Solidity compiler.
-
-Deploy the contract to a blockchain network (e.g., test network).
-
-Interact with the contract functions using a web3 wallet or development tools.
-
-Call deposit(amount) to deposit funds into the account (ensuring the amount is greater than 30).
-
-Call withdraw(amount) to withdraw funds from the account (ensuring sufficient balance).
-
-Call emergencyWithdraw(amount) to withdraw funds even if the balance is insufficient (but the transaction will revert).
-
-Call checkBalance() to view the current account balance.
-
-
-
-Limitations:
-
-
-This is a simplified example and lacks features like:
-Transferring funds to other accounts.
-Access control for functions (anyone can interact with the contract).
-Security should be a top priority for real-world applications. Consider additional security measures like access control and proper error handling.
-
-License:
-
-MIT License
-
-Author: Pavitra Pal
 
